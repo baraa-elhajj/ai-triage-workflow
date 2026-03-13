@@ -1,0 +1,14 @@
+{
+  "id": "string",
+  "source": "string",
+  "category": "string",
+  "priority": "string",
+  "confidence_score": "number",
+  "issue_summary": "string",
+  "identifiers": "object",
+  "urgency_signal": "string",
+  "routing_destination": "string",
+  "escalation_flag": "boolean",
+  "human_summary": "string",
+  "timestamp": "string"
+}
