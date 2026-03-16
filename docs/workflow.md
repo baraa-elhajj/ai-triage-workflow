@@ -41,6 +41,8 @@ Supported categories:
 - Technical Question
 - Incident/Outage
 
+Check prompt: [classification prompt](../prompts/classification.md)
+
 
 ## 4. Classification Parsing
 
@@ -56,6 +58,8 @@ Generated fields:
 - identifiers
 - urgency_signal
 
+Check prompt: [enrichment prompt](../prompts/enrichment.md)
+
 
 ## 6. Routing Logic
 
@@ -65,6 +69,8 @@ The routing engine determines which internal team should receive the request bas
 ## 7. AI Summary Agent
 
 A final AI agent generates a concise summary to help internal teams quickly understand the request context.
+
+Check prompt: [summary prompt](../prompts/summary.md)
 
 
 ## 8. Escalation Check
