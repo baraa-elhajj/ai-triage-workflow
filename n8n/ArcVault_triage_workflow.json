@@ -1,0 +1,647 @@
+{
+  "name": "AI triage workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $json.text.replace(/```json|```JSON|```/g, \"\").trim();\n\nlet parsed = {};\n\ntry {\n  parsed = JSON.parse(response);\n} catch (err) {\n  throw new Error(\"Invalid JSON returned by AI: \" + response);\n}\n\nreturn {\n  json: {\n    ...parsed\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -256
+      ],
+      "id": "bb0e51c3-974c-468d-8c5e-fd7828c1ed51",
+      "name": "Parse Classification"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $json.text.replace(/```json|```JSON|```/g, \"\").trim();\n\nlet parsed = {};\n\ntry {\n  parsed = JSON.parse(response);\n} catch (err) {\n  throw new Error(\"Invalid JSON returned by AI: \" + response);\n}\n\nreturn {\n  json: {\n    ...parsed\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -224
+      ],
+      "id": "433c7056-6a58-46e9-a779-05700ef528b6",
+      "name": "Parse Enrichment"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let destination = \"\";\n\nswitch ($json.category) {\n  case \"Feature Request\":\n    destination = \"Product\";\n    break;\n\n  case \"Billing Issue\":\n    destination = \"Billing\";\n    break;\n\n  case \"Technical Question\":\n    destination = \"IT/Security\";\n    break;\n\n  case \"Incident/Outage\":\n    destination = \"Engineering\";\n    break;\n\n  case \"Bug Report\":\n    destination = \"Engineering\";\n    break;\n\n  default:\n    destination = \"Engineering\";\n    break;\n}\n\n// Check escalation conditions\nlet escalationFlag = false;\nlet escalationReason = \"\";\nconst lowConfidence = $json.confidence_score < 0.70;\n\nconst escalationKeywords = [\"outage\", \"down for all users\", \"billing error > $500\"];\nconst keywordMatch = escalationKeywords.some(k => $json.message.toLowerCase().includes(k));\n\nif (lowConfidence || keywordMatch) {\n  destination = \"Escalation Queue\";\n  escalationFlag = true;\n  escalationReason = lowConfidence ? \"Low confidence classification\" : \"Found one or more defined escalation sentences\"\n}\n\nreturn {\n    json: {\n      ...$json,\n      routing_destination: destination,\n      escalation_flag: escalationFlag,\n      escalation_reason: escalationReason\n    }\n  };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -304
+      ],
+      "id": "c8e0ec41-5061-43a3-836a-abb5c7f7f2b0",
+      "name": "Routing Logic"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract key entities from the message: \"{{ $json.message }}\", and add the following fields:\n- core_issue: describe the core issue in one sentence.\n- identifiers: add a key-value list of any relevant identifiers mentioned in the message (e.g account id, invoice numbers, error codes, etc.)\n- urgency_signal: true/false based on the message content.\n\nOnly return a valid JSON.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a support triage assistant."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        112,
+        -224
+      ],
+      "id": "f7b1b266-be14-4112-9f4a-24c59758697e",
+      "name": "LLM Enrichment"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -32
+      ],
+      "id": "23002408-dead-40ef-a0f3-9cf54d230eb2",
+      "name": "OpenRouter",
+      "credentials": {
+        "openRouterApi": {
+          "id": "RZTLBcdA58EsTlX0",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -80,
+        -320
+      ],
+      "id": "c29d7c1b-f448-4abd-a434-f61d7228bca2",
+      "name": "Merge Classification Result",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        592,
+        -304
+      ],
+      "id": "c756563b-1418-4855-840d-4d4fd656f5b6",
+      "name": "Merge Enrichment Result",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyse the following request: {{ JSON.stringify($json) }}\n\nWrite a 2-3 sentence summary for an internal team.\nBe concise and professional.\n\nReturn a valid JSON with the field \"summary\" containing the summary you wrote.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a support triage assistant."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1008,
+        -208
+      ],
+      "id": "3465c7fc-e4fe-47e3-b6cb-0294bfa31cf3",
+      "name": "LLM Summary"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $json.text.replace(/```json|```JSON|```/g, \"\").trim();\n\nlet parsed = {};\n\ntry {\n  parsed = JSON.parse(response);\n} catch (err) {\n  throw new Error(\"Invalid JSON returned by AI: \" + response);\n}\n\nreturn {\n  json: {\n    ...parsed\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        -208
+      ],
+      "id": "7bda78fb-7d7d-4ae7-81f5-e8286322a06b",
+      "name": "Parse Summary"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1488,
+        -288
+      ],
+      "id": "699ed9d3-dfd0-46c2-8d01-33737dfa9acc",
+      "name": "Merge Summary Result",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1v_Rql2ErzD6I07doAfJgGVUMByHNsXkuw2KjYCWumDA",
+          "mode": "list",
+          "cachedResultName": "ArcVault Processed Requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_Rql2ErzD6I07doAfJgGVUMByHNsXkuw2KjYCWumDA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_Rql2ErzD6I07doAfJgGVUMByHNsXkuw2KjYCWumDA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confidence_score",
+              "displayName": "confidence_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "core_issue",
+              "displayName": "core_issue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "identifiers",
+              "displayName": "identifiers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "urgency_signal",
+              "displayName": "urgency_signal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "routing_destination",
+              "displayName": "routing_destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "escalation_flag",
+              "displayName": "escalation_flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        -192
+      ],
+      "id": "0a131342-bed9-4427-af9d-e9ba4ad55b3b",
+      "name": "Processed Requests",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "aJOk3jFVOTDOOfks",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2500b8ad-1c46-4989-a1ff-efa7673d3f78",
+              "leftValue": "={{$json.escalation_flag}}",
+              "rightValue": 0.7,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1664,
+        -288
+      ],
+      "id": "e1239ba3-637e-4b3e-b41a-4888b21b77f4",
+      "name": "Has Escalation Flag?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://webhook.site/b211412a-14f6-46e2-8b1e-5e88f3a5d67b",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        -368
+      ],
+      "id": "3ef8a7c6-2327-4fe4-8ef6-8c2442ba901e",
+      "name": "Send to Escalation Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "support-intake",
+        "options": {
+          "responseData": ""
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -944,
+        -336
+      ],
+      "id": "66d42421-3ba8-4ac6-97d2-6849614a340b",
+      "name": "Webhook",
+      "webhookId": "d01a264a-c3f7-417e-b0b8-66bd3eb9af15"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You received a message that says: \"{{ $json.message }}\"\nThe message source is: {{ $json.source }}\nClassify the message into the following fields:\n- category: [Bug Report, Feature Request, Billing Issue, Technical Question, Incident/Outage]\n- priority: [Low, Medium, High]\n- confidence_score: How much you are confident with the classification you made. Value from 0.0 to 1.0\n\nOnly return a valid JSON.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a support triage assistant."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -544,
+        -256
+      ],
+      "id": "54632ee2-efaf-42fa-b334-c498cb308636",
+      "name": "LLM Classification"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -736,
+        -336
+      ],
+      "id": "9c649655-3e9e-446f-a4d9-c97630c19ff7",
+      "name": "Extract Request Body"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Merge Classification Result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment Result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "LLM Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Parse Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM Enrichment",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "LLM Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "LLM Classification",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Classification Result": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment Result",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LLM Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Enrichment Result": {
+      "main": [
+        [
+          {
+            "node": "Routing Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Routing Logic": {
+      "main": [
+        [
+          {
+            "node": "LLM Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Summary Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Summary": {
+      "main": [
+        [
+          {
+            "node": "Parse Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Summary": {
+      "main": [
+        [
+          {
+            "node": "Merge Summary Result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Summary Result": {
+      "main": [
+        [
+          {
+            "node": "Has Escalation Flag?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Escalation Flag?": {
+      "main": [
+        [
+          {
+            "node": "Send to Escalation Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Processed Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Classification": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Request Body": {
+      "main": [
+        [
+          {
+            "node": "LLM Classification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Classification Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ce6efdab-d7a2-4937-962d-07e19cf2183d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "886a23415c9f8fab3ab6f92b25ce4e0fdb2af22cc7d891749581d5490a597b2b"
+  },
+  "id": "RS6m9Z6kg2nlJ88E",
+  "tags": []
+}
