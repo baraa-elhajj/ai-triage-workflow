@@ -1,0 +1,17 @@
+{
+    "id": "4",
+    "source": "email",
+    "message": "I'm not sure if this is the right place to ask, but is there a way to set up SSO with Okta? We're evaluating switching our auth provider.",
+    "category": "Technical Question",
+    "priority": "Medium",
+    "confidence_score": 0.92,
+    "core_issue": "The user is inquiring whether SSO can be set up with Okta and mentions evaluating a switch to a new auth provider.",
+    "identifiers": {
+        "auth_provider": "Okta"
+    },
+    "urgency_signal": false,
+    "routing_destination": "IT/Security",
+    "escalation_flag": false,
+    "escalation_reason": "",
+    "summary": "A user has inquired about setting up SSO with Okta as they evaluate switching their authentication provider. This technical question, with a medium priority but low confidence score of 0.6, has been escalated due to classification uncertainty."
+}

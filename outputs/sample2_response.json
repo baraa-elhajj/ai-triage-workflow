@@ -1,0 +1,17 @@
+{
+    "id": "2",
+    "source": "web form",
+    "message": "We'd love to see a bulk export feature for our audit logs. We're a compliance-heavy org and this would save us hours every month.",
+    "category": "Feature Request",
+    "priority": "High",
+    "confidence_score": 0.95,
+    "core_issue": "The user wants a bulk export feature for audit logs to save time.",
+    "identifiers": {
+        "org_type":"compliance-heavy"
+    },
+    "urgency_signal": false,
+    "routing_destination": "Product",
+    "escalation_flag": false,
+    "escalation_reason": "",
+    "summary": "The request proposes a bulk export feature for audit logs to enhance efficiency for a compliance-heavy organization, prioritized as high with a confidence score of 95%. This functionality is recommended for integration into the product roadmap to streamline monthly workflows. No escalation or immediate urgency signals were identified."
+}

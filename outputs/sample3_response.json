@@ -1,0 +1,19 @@
+{
+    "id": "3",
+    "source": "support portal",
+    "message": "Invoice #8821 shows a charge of $1,240 but our contract rate is $980/month. Can someone look into this?",
+    "category": "Billing Issue",
+    "priority": "Medium",
+    "confidence_score": 0.9,
+    "core_issue": "Discrepancy between invoice charge and contract rate",
+    "identifiers": {
+      "invoice_number": "8821",
+      "charge_amount": "$1,240",
+      "contract_rate": "$980/month"
+    },
+    "urgency_signal": false,
+    "routing_destination": "Billing",
+    "escalation_flag": false,
+    "escalation_reason": "",
+    "summary": "The user is inquiring whether the platform supports SSO integration with Okta as they consider switching authentication providers. They seek confirmation of feasibility and any required steps for setup. This technical question of medium priority should be handled by the IT/Security team."
+}
