@@ -1,0 +1,23 @@
+{
+  "name": "ai-triage-workflow",
+  "version": "1.0.0",
+  "description": "An AI-powered workflow system for triaging and processing data.",
+  "homepage": "https://github.com/baraa-elhajj/ai-triage-workflow#readme",
+  "bugs": {
+    "url": "https://github.com/baraa-elhajj/ai-triage-workflow/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baraa-elhajj/ai-triage-workflow.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
