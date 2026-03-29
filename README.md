@@ -1,4 +1,4 @@
-# ArcVault AI Support Triage Workflow
+# AI Support Triage Workflow
 
 This project implements an AI-powered support request triage pipeline
 using **n8n**. Incoming requests are automatically classified, enriched
